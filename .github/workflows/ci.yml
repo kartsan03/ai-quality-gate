@@ -1,0 +1,22 @@
+name: ci
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .[dev]
+      - run: pytest
+      - name: quality gate on passing examples
+        run: python -m aiqg run examples/passing/
+      - name: regression examples must fail (proves the gate catches bad outputs)
+        run: |
+          if python -m aiqg run examples/regressions/ --html report.html; then
+            echo "regression examples contain bad outputs; the gate should have failed" >&2
+            exit 1
+          fi

@@ -1,0 +1,11 @@
+name: rag_answer
+task_type: rag
+source_file: context.txt
+outputs_glob: outputs/*.json
+checks:
+  required_fields:
+    fields: [answer, citations]
+  grounding:
+    numbers_in: [answer]
+    require_citations: citations
+  forbidden_phrases: {}

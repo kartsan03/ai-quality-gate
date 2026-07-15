@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Quality Gate report</title>
+<style>
+body { background: #101216; color: #c9d1d9; max-width: 66rem; margin: 2rem auto;
+       padding: 0 1rem; font: 13px/1.55 ui-monospace, 'Cascadia Mono', Consolas,
+       'Liberation Mono', monospace; }
+h1 { font-size: 1.1rem; font-weight: 600; letter-spacing: .04em; margin: 0; }
+h2 { font-size: .85rem; font-weight: 600; text-transform: uppercase;
+     letter-spacing: .08em; color: #8b949e; margin: 2.2rem 0 .6rem; }
+.meta { color: #8b949e; font-size: .8rem; margin: .2rem 0 1.4rem; }
+.verdict { font-size: 1.6rem; font-weight: 700; letter-spacing: .05em;
+           margin: 1.2rem 0 .2rem; }
+.tiles { display: flex; gap: .6rem; flex-wrap: wrap; margin: 1rem 0 0; }
+.tile { border: 1px solid #30363d; padding: .55rem .9rem; min-width: 6.5rem; }
+.tile b { display: block; font-size: 1.35rem; font-weight: 600; }
+.tile span { color: #8b949e; font-size: .75rem; text-transform: uppercase;
+             letter-spacing: .06em; }
+table { border-collapse: collapse; width: 100%; font-size: .8rem; }
+th, td { text-align: left; padding: .3rem .55rem; border-bottom: 1px solid #21262d;
+         vertical-align: top; }
+th { color: #8b949e; font-weight: 400; text-transform: uppercase;
+     letter-spacing: .06em; font-size: .7rem; }
+td:first-child { width: 3.2rem; }
+.pass { color: #3fb950; }
+.fail { color: #f85149; }
+ul.failures { margin: .25rem 0 .1rem; padding-left: 1.1rem; color: #e0938f;
+              list-style: '- '; }
+ul.failures li { margin: .1rem 0; }
+</style>
+</head>
+<body>
+<h1>ai-quality-gate</h1>
+<p class="meta">generated 2026-07-04 06:28 UTC</p>
+<div class="verdict fail">GATE FAILED</div>
+<div class="tiles">
+<div class="tile"><b>4</b><span>cases</span></div>
+<div class="tile"><b>6</b><span>outputs</span></div>
+<div class="tile"><b class="pass">8</b><span>checks passed</span></div>
+<div class="tile"><b class="fail">11</b><span>checks failed</span></div>
+</div>
+<h2>Failures by validator</h2><table><tr><th></th><th>validator</th><th>checks</th></tr><tr><td></td><td>grounding</td><td>3 failed</td></tr><tr><td></td><td>required_fields</td><td>2 failed</td></tr><tr><td></td><td>forbidden_phrases</td><td>2 failed</td></tr><tr><td></td><td>snapshot</td><td>2 failed</td></tr><tr><td></td><td>regex</td><td>1 failed</td></tr><tr><td></td><td>stability</td><td>1 failed</td></tr></table>
+<h2>crm_summary_regression / <span class="fail">4 failing</span></h2><table><tr><th>status</th><th>check</th><th>output</th></tr><tr><td class="fail">FAIL</td><td>required_fields</td><td>examples\regressions\crm_summary\outputs\bad.json<ul class="failures"><li>required field missing or empty: next_step</li></ul></td></tr><tr><td class="fail">FAIL</td><td>grounding</td><td>examples\regressions\crm_summary\outputs\bad.json<ul class="failures"><li>grounding: company=&#x27;Beltrade Trucking NV&#x27; not found in source</li></ul></td></tr><tr><td class="fail">FAIL</td><td>forbidden_phrases</td><td>examples\regressions\crm_summary\outputs\bad.json<ul class="failures"><li>forbidden phrase &#x27;as an ai language model&#x27; in output</li></ul></td></tr><tr><td class="fail">FAIL</td><td>snapshot</td><td>examples\regressions\crm_summary\outputs\bad.json<ul class="failures"><li>snapshot: company: expected &#x27;Beltrade Logistics&#x27;, got &#x27;Beltrade Trucking NV&#x27;</li><li>snapshot: next_step: expected &#x27;Send pricing for the 40-truck tier by Friday.&#x27;, got &#x27;&#x27;</li><li>snapshot: summary: expected &#x27;Runs 40 trucks on the Antwerp - Rotterdam corridor; route planning is a single-dispatcher spreadsheet. Wants a September pilot of the route planning module that does not touch their TMS data.&#x27;, got &#x27;As an AI language model, I cannot summarize private call notes.&#x27;</li></ul></td></tr></table><h2>invoice_extraction_regression / <span class="fail">3 failing</span></h2><table><tr><th>status</th><th>check</th><th>output</th></tr><tr><td class="pass">PASS</td><td>json_schema</td><td>examples\regressions\invoice_extraction\outputs\bad.json</td></tr><tr><td class="pass">PASS</td><td>required_fields</td><td>examples\regressions\invoice_extraction\outputs\bad.json</td></tr><tr><td class="fail">FAIL</td><td>regex</td><td>examples\regressions\invoice_extraction\outputs\bad.json<ul class="failures"><li>regex: invoice_number=&#x27;INV-2024-187&#x27; does not match &#x27;^INV-\\d{4}-\\d{4}$&#x27;</li></ul></td></tr><tr><td class="fail">FAIL</td><td>grounding</td><td>examples\regressions\invoice_extraction\outputs\bad.json<ul class="failures"><li>grounding: invoice_number=&#x27;INV-2024-187&#x27; not found in source</li><li>grounding: total=&#x27;6,868.50&#x27; not found in source</li></ul></td></tr><tr><td class="fail">FAIL</td><td>snapshot</td><td>examples\regressions\invoice_extraction\outputs\bad.json<ul class="failures"><li>snapshot: invoice_number: expected &#x27;INV-2024-0187&#x27;, got &#x27;INV-2024-187&#x27;</li><li>snapshot: total: expected &#x27;5,868.50&#x27;, got &#x27;6,868.50&#x27;</li></ul></td></tr></table><h2>rag_answer_regression / <span class="fail">3 failing</span></h2><table><tr><th>status</th><th>check</th><th>output</th></tr><tr><td class="fail">FAIL</td><td>required_fields</td><td>examples\regressions\rag_answer\outputs\bad.json<ul class="failures"><li>required field missing or empty: citations</li></ul></td></tr><tr><td class="fail">FAIL</td><td>grounding</td><td>examples\regressions\rag_answer\outputs\bad.json<ul class="failures"><li>grounding: number &#x27;30&#x27; in answer not found in source</li><li>grounding: number &#x27;45&#x27; in answer not found in source</li><li>grounding: no citations in citations</li></ul></td></tr><tr><td class="fail">FAIL</td><td>forbidden_phrases</td><td>examples\regressions\rag_answer\outputs\bad.json<ul class="failures"><li>forbidden phrase &quot;i don&#x27;t have enough information&quot; in output</li></ul></td></tr></table><h2>support_ticket_classification_regression / <span class="fail">1 failing</span></h2><table><tr><th>status</th><th>check</th><th>output</th></tr><tr><td class="pass">PASS</td><td>json_schema</td><td>examples\regressions\support_ticket_classification\outputs\run_1.json</td></tr><tr><td class="pass">PASS</td><td>json_schema</td><td>examples\regressions\support_ticket_classification\outputs\run_2.json</td></tr><tr><td class="pass">PASS</td><td>json_schema</td><td>examples\regressions\support_ticket_classification\outputs\run_3.json</td></tr><tr><td class="pass">PASS</td><td>required_fields</td><td>examples\regressions\support_ticket_classification\outputs\run_1.json</td></tr><tr><td class="pass">PASS</td><td>required_fields</td><td>examples\regressions\support_ticket_classification\outputs\run_2.json</td></tr><tr><td class="pass">PASS</td><td>required_fields</td><td>examples\regressions\support_ticket_classification\outputs\run_3.json</td></tr><tr><td class="fail">FAIL</td><td>stability</td><td>(all outputs)<ul class="failures"><li>stability: category differs across outputs: run_1.json=&#x27;account_access&#x27;, run_2.json=&#x27;account_access&#x27;, run_3.json=&#x27;billing&#x27;</li><li>stability: priority differs across outputs: run_1.json=&#x27;high&#x27;, run_2.json=&#x27;high&#x27;, run_3.json=&#x27;low&#x27;</li></ul></td></tr></table>
+</body>
+</html>

@@ -1,0 +1,15 @@
+INVOICE  INV-2024-0187
+
+Vendor: Nordwind Logistics BV
+Hafenstraat 12, 2030 Antwerp
+
+Date: 2026-03-14
+Due date: 2026-04-13
+
+Freight services, March 2026
+  Container transport, Antwerp - Rotterdam    4,850.00 EUR
+  Fuel surcharge                              1,018.50 EUR
+
+Total due: 5,868.50 EUR
+
+Payment within 30 days to IBAN BE68 5390 0754 7034.

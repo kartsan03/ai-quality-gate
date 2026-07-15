@@ -1,0 +1,17 @@
+name: invoice_extraction
+task_type: extraction
+source_file: invoice.txt
+outputs_glob: outputs/*.json
+checks:
+  json_schema:
+    schema_file: schema.json
+  required_fields:
+    fields: [invoice_number, vendor, total, currency]
+  regex:
+    fields:
+      invoice_number: "^INV-\\d{4}-\\d{4}$"
+  grounding:
+    fields: [invoice_number, vendor, total]
+  snapshot:
+    file: expected.json
+    ignore: [confidence, extracted_at]

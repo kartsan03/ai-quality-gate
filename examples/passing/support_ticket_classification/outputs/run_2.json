@@ -1,0 +1,5 @@
+{
+  "category": "account_access",
+  "priority": "high",
+  "summary": "Account locked after password reset; customer asks for urgent unlock before an afternoon demo."
+}

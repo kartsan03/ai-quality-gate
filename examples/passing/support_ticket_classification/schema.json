@@ -1,0 +1,9 @@
+{
+  "type": "object",
+  "required": ["category", "priority", "summary"],
+  "properties": {
+    "category": {"enum": ["account_access", "billing", "bug", "feature_request"]},
+    "priority": {"enum": ["low", "medium", "high"]},
+    "summary": {"type": "string"}
+  }
+}

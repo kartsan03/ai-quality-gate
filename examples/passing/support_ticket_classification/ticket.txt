@@ -1,0 +1,6 @@
+Subject: Locked out after password reset
+From: m.devos@example.com
+
+I reset my password this morning and now I cannot log in at all.
+The app says "account temporarily locked". I have a customer demo
+at 15:00 and need access before then. Please treat this as urgent.

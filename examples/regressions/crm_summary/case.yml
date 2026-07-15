@@ -1,0 +1,13 @@
+name: crm_summary_regression
+task_type: summary
+source_file: call_notes.txt
+outputs_glob: outputs/*.json
+checks:
+  required_fields:
+    fields: [company, summary, next_step]
+  grounding:
+    fields: [company]
+  forbidden_phrases: {}
+  snapshot:
+    file: expected.json
+    ignore: [generated_at]

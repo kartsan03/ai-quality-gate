@@ -1,0 +1,11 @@
+Call notes, 2026-06-18
+
+Attendees: Sofie Andries (Beltrade Logistics), J. Peeters (our side)
+
+Beltrade Logistics runs 40 trucks on the Antwerp - Rotterdam corridor.
+Their current route planning is a spreadsheet maintained by one dispatcher,
+and they lose slots at the terminal when he is off. Sofie wants to pilot
+the route planning module in September, before the winter schedule.
+Budget is not a blocker, but the pilot must not touch their TMS data.
+
+Next step: send pricing for the 40-truck tier by Friday.

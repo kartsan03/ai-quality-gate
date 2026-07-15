@@ -1,0 +1,11 @@
+name: support_ticket_classification
+task_type: classification
+source_file: ticket.txt
+outputs_glob: outputs/*.json
+checks:
+  json_schema:
+    schema_file: schema.json
+  required_fields:
+    fields: [category, priority, summary]
+  stability:
+    fields: [category, priority]
