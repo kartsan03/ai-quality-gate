@@ -1,21 +1,30 @@
 import argparse
+import sys
 from collections import Counter
 
+from . import __version__
 from .report import write_report
 from .runner import find_cases, run_case
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="aiqg", description="Quality gate for recorded AI outputs.")
+    parser.add_argument("--version", action="version", version=f"aiqg {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
     run = sub.add_parser("run", help="run all checks for a case file or a directory of cases")
     run.add_argument("target", help="a case.yml file or a directory containing cases")
     run.add_argument("--html", metavar="FILE", help="write a static HTML report to FILE")
     args = parser.parse_args(argv)
 
-    results = []
-    for case_path in find_cases(args.target):
-        results.extend(run_case(case_path))
+    try:
+        case_paths = find_cases(args.target)
+        results = []
+        for case_path in case_paths:
+            results.extend(run_case(case_path))
+    except (FileNotFoundError, ValueError) as e:
+        # Setup errors are not gate failures: exit 2 keeps 1 unambiguous in CI.
+        print(f"aiqg: error: {e}", file=sys.stderr)
+        return 2
 
     failed = [r for r in results if r.failures]
     for r in results:

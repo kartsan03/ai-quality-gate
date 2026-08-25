@@ -97,6 +97,21 @@ python -m aiqg run examples/passing/invoice_extraction/case.yml
 python -m aiqg run examples/regressions/ --html reports/sample_report.html
 ```
 
+The package also installs an `aiqg` console script, so `aiqg run ...` works
+everywhere the module form does.
+
+## Exit codes
+
+| Code | Meaning |
+|---|---|
+| `0` | All checks passed |
+| `1` | At least one check failed (the gate caught something) |
+| `2` | Setup error: bad path, no cases found, unknown check name |
+
+`1` is reserved for gate failures only, so a CI pipeline can treat it as
+"the recorded outputs regressed" without mistaking a typo in a path for a
+real regression.
+
 ## Example output
 
 From the regression set:
