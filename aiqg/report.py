@@ -105,3 +105,38 @@ def write_report(results, path):
     out = Path(path)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(page, encoding="utf-8")
+
+
+def write_junit(results, path):
+    """JUnit XML so CI renders gate failures as annotated test results."""
+    by_case = {}
+    for r in results:
+        by_case.setdefault(r.case, []).append(r)
+
+    suites = []
+    for case in sorted(by_case):
+        rows = by_case[case]
+        n_failed = sum(1 for r in rows if r.failures)
+        testcases = []
+        for r in rows:
+            name = f"{r.check} [{r.output_file}]"
+            if r.failures:
+                detail = "\n".join(r.failures)
+                testcases.append(
+                    f'<testcase classname="{html.escape(case)}" name="{html.escape(name)}">'
+                    f'<failure message="{html.escape(r.failures[0])}">'
+                    f"{html.escape(detail)}</failure></testcase>"
+                )
+            else:
+                testcases.append(
+                    f'<testcase classname="{html.escape(case)}" name="{html.escape(name)}"/>'
+                )
+        suites.append(
+            f'<testsuite name="{html.escape(case)}" tests="{len(rows)}" failures="{n_failed}">'
+            + "".join(testcases)
+            + "</testsuite>"
+        )
+
+    out = Path(path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("<testsuites>" + "".join(suites) + "</testsuites>", encoding="utf-8")

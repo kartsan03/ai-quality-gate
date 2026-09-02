@@ -26,8 +26,29 @@ class CheckResult:
 
 def load_case(case_path):
     case_dir = case_path.parent
-    case = yaml.safe_load(case_path.read_text(encoding="utf-8"))
+    try:
+        case = yaml.safe_load(case_path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as e:
+        raise ValueError(f"{case_path.as_posix()}: invalid YAML: {e}") from e
+    if not isinstance(case, dict):
+        raise ValueError(f"{case_path.as_posix()}: case file must be a YAML mapping")
+    for key in ("name", "source_file", "outputs_glob"):
+        if key not in case:
+            raise ValueError(f"{case_path.as_posix()}: missing required key {key!r}")
     conf = case.get("checks") or {}
+    known = set(PER_OUTPUT) | {"stability"}
+    for check_name in conf:
+        if check_name not in known:
+            raise ValueError(f"{case_path.as_posix()}: unknown check {check_name!r}")
+        if conf[check_name] is None:
+            conf[check_name] = {}
+    if "json_schema" in conf and not {"schema", "schema_file"} & conf["json_schema"].keys():
+        raise ValueError(f"{case_path.as_posix()}: json_schema requires 'schema_file' or an inline 'schema'")
+    if "snapshot" in conf and not {"expected", "file"} & conf["snapshot"].keys():
+        raise ValueError(f"{case_path.as_posix()}: snapshot requires 'file' or an inline 'expected'")
+    for check_name in ("required_fields", "regex", "stability"):
+        if check_name in conf and "fields" not in conf[check_name]:
+            raise ValueError(f"{case_path.as_posix()}: {check_name} requires 'fields'")
     if "schema_file" in conf.get("json_schema", {}):
         schema_path = case_dir / conf["json_schema"]["schema_file"]
         conf["json_schema"]["schema"] = json.loads(schema_path.read_text(encoding="utf-8"))
@@ -52,16 +73,14 @@ def run_case(case_path):
         try:
             outputs.append((path, json.loads(path.read_text(encoding="utf-8"))))
         except json.JSONDecodeError as e:
-            results.append(CheckResult(name, "json_parse", str(path), [f"invalid JSON: {e}"]))
+            results.append(CheckResult(name, "json_parse", path.as_posix(), [f"invalid JSON: {e}"]))
 
     for check_name, conf in case["checks"].items():
         if check_name == "stability":
             continue
-        fn = PER_OUTPUT.get(check_name)
-        if fn is None:
-            raise ValueError(f"{case_path}: unknown check {check_name!r}")
+        fn = PER_OUTPUT[check_name]
         for path, data in outputs:
-            results.append(CheckResult(name, check_name, str(path), fn(conf, data, case["source"])))
+            results.append(CheckResult(name, check_name, path.as_posix(), fn(conf, data, case["source"])))
 
     if "stability" in case["checks"]:
         failures = checks.check_stability(case["checks"]["stability"], outputs)

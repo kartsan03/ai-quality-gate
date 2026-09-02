@@ -1,5 +1,10 @@
 # AI Quality Gate
 
+[![ci](https://github.com/kartsan03/ai-quality-gate/actions/workflows/ci.yml/badge.svg)](https://github.com/kartsan03/ai-quality-gate/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/aiqg)](https://pypi.org/project/aiqg/)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
 A small, local CI gate for AI feature outputs. You record what your LLM
 pipeline produced, describe what "acceptable" means in a YAML case file, and
 `aiqg` tells you (and your CI) whether the outputs hold up.
@@ -21,6 +26,21 @@ run on every change, exit code 0 or 1.
 It is deliberately not an eval platform. No dashboards, no scores from a
 judge model, no embeddings. If a check here fails, a human can read the
 failure message and know exactly why.
+
+## How this compares
+
+promptfoo and DeepEval are eval runners: they call model providers to produce
+fresh outputs and score them. aiqg is the deterministic layer that gates the
+outputs you already have. They are complementary, not competing — many teams
+run both.
+
+| | aiqg | promptfoo | DeepEval |
+|---|---|---|---|
+| Calls models / needs API keys | never | yes, to generate outputs | yes, most metrics are LLM-judged |
+| Runs fully offline | yes | no | no |
+| Verdict | deterministic: same inputs, same exit code | deterministic for exact/regex assertions | model-scored, scores can vary |
+| Usage model | point it at recorded output files | define prompts + providers in YAML | write pytest test cases |
+| Role | regression gate on recorded outputs | prompt runner, red-teaming, model selection | semantic metrics: faithfulness, relevance |
 
 ## How it works
 
@@ -65,6 +85,16 @@ a crash of the run.
 ## Quick start
 
 ```
+pip install aiqg
+aiqg init my_feature
+aiqg run my_feature
+```
+
+`init` scaffolds a case that runs green out of the box; replace `source.txt`
+and `outputs/` with your recorded data and edit the checks. From a source
+checkout:
+
+```
 pip install -e .[dev]
 pytest
 python -m aiqg run examples/passing/
@@ -95,6 +125,9 @@ python -m aiqg run examples/passing/invoice_extraction/case.yml
 
 # with a static HTML report
 python -m aiqg run examples/regressions/ --html reports/sample_report.html
+
+# with a JUnit XML report for CI test annotations
+python -m aiqg run examples/regressions/ --junit junit.xml
 ```
 
 The package also installs an `aiqg` console script, so `aiqg run ...` works
@@ -117,7 +150,7 @@ real regression.
 From the regression set:
 
 ```
-FAIL  invoice_extraction_regression  grounding  examples\regressions\invoice_extraction\outputs\bad.json
+FAIL  invoice_extraction_regression  grounding  examples/regressions/invoice_extraction/outputs/bad.json
       - grounding: invoice_number='INV-2024-187' not found in source
       - grounding: total='6,868.50' not found in source
 FAIL  support_ticket_classification_regression  stability  (all outputs)
@@ -160,6 +193,7 @@ examples/
     crm_summary/                  call notes + faithful summary
   regressions/  same cases with bad outputs, exits 1 by design
 tests/          pytest suite for the validators and the runner
+docs/           checks reference, recording-outputs guide
 ```
 
 ## How to add a case
@@ -190,6 +224,33 @@ Grounding also supports `numbers_in: [answer]` (every number in the field
 must appear in the source) and `require_citations: citations` (the field must
 be a non-empty list). Field names take dotted paths like `customer.name`.
 
+Every check and every `case.yml` key is documented in
+[docs/checks.md](docs/checks.md); [docs/recording-outputs.md](docs/recording-outputs.md)
+shows how to produce the recorded outputs in the first place.
+
+## Using it in your own CI
+
+Install the package, point it at your cases, and let a non-zero exit fail the
+pipeline. `--junit` makes GitHub Actions render each failure as an annotation
+on the commit:
+
+```yaml
+- uses: actions/checkout@v4
+- uses: actions/setup-python@v5
+  with:
+    python-version: "3.12"
+- run: pip install aiqg
+- run: aiqg run path/to/your/cases --junit junit.xml
+- uses: mikepenz/action-junit-report@v4
+  if: always()
+  with:
+    report_paths: junit.xml
+```
+
+Exit `1` means the recorded outputs regressed and fails the job; exit `2`
+means a setup error (bad path, malformed case file) — the same distinction the
+gate uses itself. No secrets are involved: the gate never calls a model.
+
 ## How CI works
 
 `.github/workflows/ci.yml` installs the package and runs three gates:
@@ -198,9 +259,6 @@ be a non-empty list). Field names take dotted paths like `customer.name`.
 2. `python -m aiqg run examples/passing/` must exit 0.
 3. `python -m aiqg run examples/regressions/` must exit 1. A gate that lets
    the bad outputs through is itself a broken build.
-
-In your own project you would run the gate over your recorded outputs and let
-a non-zero exit fail the pipeline directly. No secrets are used in CI.
 
 ## Limitations
 

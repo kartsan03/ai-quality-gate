@@ -1,10 +1,23 @@
 [project]
 name = "aiqg"
-version = "0.2.0"
+version = "0.3.0"
 description = "Local quality gate for recorded AI/LLM outputs"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
+keywords = ["llm", "ai", "testing", "ci", "regression-testing", "evaluation", "quality-gate", "hallucination", "promptfoo", "deepeval"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Software Development :: Testing",
+]
 dependencies = [
     "PyYAML>=6",
     "jsonschema>=4",
@@ -12,6 +25,9 @@ dependencies = [
 
 [project.urls]
 Repository = "https://github.com/kartsan03/ai-quality-gate"
+Issues = "https://github.com/kartsan03/ai-quality-gate/issues"
+Changelog = "https://github.com/kartsan03/ai-quality-gate/blob/main/CHANGELOG.md"
+Documentation = "https://github.com/kartsan03/ai-quality-gate/tree/main/docs"
 
 [project.optional-dependencies]
 dev = ["pytest>=8"]
