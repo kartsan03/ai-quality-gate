@@ -7,8 +7,7 @@ inputs:
   install:
     description: >-
       pip install target. Default "." installs from the current checkout
-      (requires actions/checkout first). Use aiqg==0.3.0 for the last
-      published PyPI release until 0.3.1 is on PyPI.
+      (requires actions/checkout first). Use aiqg==0.3.1 for the published PyPI release.
     required: false
     default: "."
   junit:
