@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.3.1 - 2026-09-05
+
+### Added
+
+- Composite GitHub Action `.github/actions/aiqg-run` installs pinned `aiqg` and
+  runs `aiqg run`, preserving the CLI exit code (`path`, optional `html`/`junit`).
+- `aiqg snapshot --update` and `aiqg run --update-snapshots` rewrite snapshot
+  `file` targets from the first parseable output (ignored keys dropped). Refused
+  when `CI=true` or `GITHUB_ACTIONS=true` (exit 2).
+- `aiqg ingest --out DIR [--jsonpath PATH] [FILE|-]` turns JSONL into
+  `0001.json`, `0002.json`, …
+- Packaged `aiqg/case_schema.json`; `load_case` validates against it in addition
+  to the existing setup checks.
+- Docs: [with-promptfoo-deepeval.md](docs/with-promptfoo-deepeval.md); ingest /
+  snapshot update notes in [recording-outputs.md](docs/recording-outputs.md).
+
 ## 0.3.0 - 2026-09-02
 
 ### Added

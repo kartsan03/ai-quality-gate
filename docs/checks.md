@@ -165,3 +165,11 @@ All field lookups accept dotted paths (`customer.name`). List indexing
 | `0` | All checks passed |
 | `1` | At least one check failed — a gate failure |
 | `2` | Setup error: bad path, no cases, malformed case file |
+
+
+## Case file schema
+
+In addition to the checks above, each `case.yml` is validated against the
+packaged JSON Schema at `aiqg/case_schema.json` (required keys, known check
+names, and basic shapes). Schema failures are setup errors (exit `2`) with an
+`invalid case.yml` message.

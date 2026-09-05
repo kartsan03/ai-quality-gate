@@ -11,12 +11,31 @@ my_case/
     run_1.json      # one JSON file per recorded model output
 ```
 
-Three ways to get there.
+Four ways to get there.
 
-## From logs
+## From logs with `aiqg ingest`
 
-If your pipeline logs requests and responses (JSONL or any structured log),
-split them into per-output files:
+If your pipeline logs JSONL (one JSON object per line), split them into
+per-output files:
+
+```
+# whole object per line
+aiqg ingest pipeline_logs.jsonl --out invoice_extraction/outputs
+
+# keep only a nested field (dotted path)
+aiqg ingest pipeline_logs.jsonl --out invoice_extraction/outputs --jsonpath response
+
+# stdin
+cat pipeline_logs.jsonl | aiqg ingest --out invoice_extraction/outputs --jsonpath response
+```
+
+Writes `0001.json`, `0002.json`, … into `--out` (default `outputs`). Empty
+input or a missing `--jsonpath` target is a setup error (exit 2).
+
+See also [with-promptfoo-deepeval.md](with-promptfoo-deepeval.md) for recording
+from those tools into the same layout.
+
+## From logs (manual)
 
 ```python
 import json
@@ -25,7 +44,7 @@ from pathlib import Path
 out = Path("invoice_extraction/outputs")
 out.mkdir(parents=True, exist_ok=True)
 with open("pipeline_logs.jsonl", encoding="utf-8") as logs:
-    for i, line in enumerate(logs):
+    for i, line in enumerate(logs, start=1):
         record = json.loads(line)
         if record["task"] == "invoice_extraction":
             (out / f"{i:04}.json").write_text(
@@ -47,7 +66,7 @@ import requests
 out = Path("invoice_extraction/outputs")
 out.mkdir(parents=True, exist_ok=True)
 inputs = [json.loads(l) for l in open("golden_inputs.jsonl", encoding="utf-8")]
-for i, item in enumerate(inputs):
+for i, item in enumerate(inputs, start=1):
     r = requests.post("http://localhost:8000/extract", json=item, timeout=60)
     (out / f"{i:04}.json").write_text(json.dumps(r.json(), indent=2), encoding="utf-8")
 ```
@@ -68,6 +87,21 @@ picked up by `outputs_glob` and compared in sorted order.
 Timestamps, latencies, confidences and other values that legitimately change
 between runs should be excluded from `snapshot` via `ignore`; that list drops
 keys recursively before the diff.
+
+## Updating snapshots
+
+After a deliberate output change, rewrite the approved snapshot from the first
+parseable recorded output of each case (ignored keys are dropped, same as the
+check):
+
+```
+aiqg snapshot --update path/to/cases
+# or, update then re-run the gate in one step:
+aiqg run path/to/cases --update-snapshots
+```
+
+Both refuse to run when `CI=true` or `GITHUB_ACTIONS=true`, so a misconfigured
+workflow cannot silently rewrite golden files in CI.
 
 ## What to commit
 

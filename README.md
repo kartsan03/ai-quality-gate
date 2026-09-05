@@ -128,6 +128,12 @@ python -m aiqg run examples/regressions/ --html reports/sample_report.html
 
 # with a JUnit XML report for CI test annotations
 python -m aiqg run examples/regressions/ --junit junit.xml
+
+# rewrite snapshot expected.json from recorded outputs (local only; refused in CI)
+aiqg snapshot --update examples/passing/invoice_extraction
+
+# split JSONL logs into outputs/0001.json, …
+aiqg ingest logs.jsonl --out my_case/outputs --jsonpath response
 ```
 
 The package also installs an `aiqg` console script, so `aiqg run ...` works
@@ -193,7 +199,8 @@ examples/
     crm_summary/                  call notes + faithful summary
   regressions/  same cases with bad outputs, exits 1 by design
 tests/          pytest suite for the validators and the runner
-docs/           checks reference, recording-outputs guide
+docs/           checks, recording-outputs, promptfoo/DeepEval guide
+.github/actions/aiqg-run/  composite action for CI
 ```
 
 ## How to add a case
@@ -226,20 +233,59 @@ be a non-empty list). Field names take dotted paths like `customer.name`.
 
 Every check and every `case.yml` key is documented in
 [docs/checks.md](docs/checks.md); [docs/recording-outputs.md](docs/recording-outputs.md)
-shows how to produce the recorded outputs in the first place.
+shows how to produce the recorded outputs (`aiqg ingest`, snapshots);
+[docs/with-promptfoo-deepeval.md](docs/with-promptfoo-deepeval.md) covers
+recording from those tools into fixtures for `aiqg run`.
 
 ## Using it in your own CI
 
-Install the package, point it at your cases, and let a non-zero exit fail the
-pipeline. `--junit` makes GitHub Actions render each failure as an annotation
-on the commit:
+### Composite action (copy-paste)
+
+Pin the published package and run the gate with the composite action shipped in
+this repo. The action installs `aiqg==0.3.1` by default and preserves the CLI
+exit code (0 / 1 / 2):
+
+```yaml
+name: aiqg
+on: [push, pull_request]
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: kartsan03/ai-quality-gate/.github/actions/aiqg-run@main
+        with:
+          path: path/to/your/cases
+          junit: junit.xml
+          # html: reports/gate.html
+          # version: "0.3.1"   # default
+      - uses: mikepenz/action-junit-report@v4
+        if: always()
+        with:
+          report_paths: junit.xml
+```
+
+From a checkout that already contains this repository (or a submodule), use a
+relative path instead:
+
+```yaml
+- uses: ./.github/actions/aiqg-run
+  with:
+    path: path/to/your/cases
+    version: "0.3.1"
+```
+
+Inputs: `path` (required), optional `html`, `junit`, `version` (default
+`0.3.1`), `python-version` (default `3.12`).
+
+### Manual install
 
 ```yaml
 - uses: actions/checkout@v4
 - uses: actions/setup-python@v5
   with:
     python-version: "3.12"
-- run: pip install aiqg
+- run: pip install aiqg==0.3.1
 - run: aiqg run path/to/your/cases --junit junit.xml
 - uses: mikepenz/action-junit-report@v4
   if: always()
