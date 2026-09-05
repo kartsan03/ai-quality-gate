@@ -78,10 +78,17 @@ def test_run_update_snapshots_denied_in_ci(tmp_path, monkeypatch, capsys):
     assert "refusing to update snapshots" in capsys.readouterr().err
 
 
-def test_refuse_helper_only_true():
-    # Non-"true" values must not trip the hard refuse.
-    os.environ.pop("CI", None)
-    os.environ.pop("GITHUB_ACTIONS", None)
+@pytest.mark.parametrize("value", ["1", "true", "TRUE", "yes"])
+def test_refuse_helper_truthy_values(monkeypatch, value):
+    monkeypatch.setenv("CI", value)
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+    with pytest.raises(ValueError, match="refusing to update snapshots"):
+        refuse_snapshot_update_in_ci()
+
+
+def test_refuse_helper_allows_unset(monkeypatch):
+    monkeypatch.delenv("CI", raising=False)
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
     refuse_snapshot_update_in_ci()
 
 
@@ -159,3 +166,39 @@ def test_exit_1_regression_examples():
 def test_exit_2_setup_error(capsys):
     assert main(["run", "no/such/path"]) == 2
     assert "error" in capsys.readouterr().err
+
+
+def test_path_escape_snapshot_file_exits_2(tmp_path, capsys):
+    root = make_snapshot_case(tmp_path / "snap")
+    case = root / "case.yml"
+    text = case.read_text(encoding="utf-8")
+    case.write_text(text.replace("file: expected.json", "file: ../../evil.json"), encoding="utf-8")
+    assert main(["run", str(root)]) == 2
+    assert "escapes case directory" in capsys.readouterr().err
+
+
+def test_path_escape_source_file_exits_2(tmp_path, capsys):
+    root = make_snapshot_case(tmp_path / "snap")
+    case = root / "case.yml"
+    text = case.read_text(encoding="utf-8")
+    case.write_text(text.replace("source_file: source.txt", "source_file: ../outside.txt"), encoding="utf-8")
+    assert main(["run", str(root)]) == 2
+    assert "escapes case directory" in capsys.readouterr().err
+
+
+def test_empty_outputs_exits_2(tmp_path, capsys):
+    root = tmp_path / "empty"
+    root.mkdir()
+    (root / "source.txt").write_text("Total due: 100 EUR", encoding="utf-8")
+    (root / "outputs").mkdir()
+    (root / "case.yml").write_text(textwrap.dedent("""        name: empty_out
+        task_type: extraction
+        source_file: source.txt
+        outputs_glob: outputs/*.json
+        checks:
+          required_fields:
+            fields: [total]
+        """), encoding="utf-8")
+    assert main(["run", str(root)]) == 2
+    assert "no outputs match" in capsys.readouterr().err
+

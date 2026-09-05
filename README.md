@@ -194,7 +194,7 @@ examples/
   regressions/  same cases with bad outputs, exits 1 by design
 tests/          pytest suite for the validators and the runner
 docs/           checks reference, recording-outputs, promptfoo/DeepEval guide
-.github/actions/aiqg-run/   composite Action (pinned aiqg==0.3.1)
+.github/actions/aiqg-run/   composite Action (installs from checkout by default)
 ```
 
 ## How to add a case
@@ -235,8 +235,11 @@ recording from those tools into fixtures for `aiqg run`.
 
 ### Composite Action (recommended)
 
-Copy-paste workflow using the pinned composite action shipped in this repo
-(`.github/actions/aiqg-run/`, installs `aiqg==0.3.1`):
+Copy-paste workflow using the composite action shipped in this repo
+(`.github/actions/aiqg-run/`). By default it runs `pip install .` against the
+checked-out tree (inputs are passed via `env:`, not interpolated into bash).
+Until `0.3.1` is published to PyPI, prefer installing from checkout or pin the
+last published release `aiqg==0.3.0`.
 
 ```yaml
 name: aiqg
@@ -246,7 +249,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: kartsan03/ai-quality-gate/.github/actions/aiqg-run@v0.3.1
+      - uses: ./.github/actions/aiqg-run
         with:
           path: path/to/your/cases
           junit: junit.xml
@@ -256,18 +259,16 @@ jobs:
           report_paths: junit.xml
 ```
 
-If you vendor the action from a checkout of this repository (or a submodule),
-use a relative path instead:
+To install a published PyPI release instead of the checkout:
 
 ```yaml
-- uses: actions/checkout@v4
 - uses: ./.github/actions/aiqg-run
   with:
     path: path/to/your/cases
-    version: "0.3.1"
+    install: "aiqg==0.3.0"
 ```
 
-Inputs: `path` (required), `version` (default `0.3.1`), `junit`, `html`,
+Inputs: `path` (required), `install` (default `.`), `junit`, `html`,
 `python-version` (default `3.12`).
 
 ### Manual install
@@ -281,7 +282,8 @@ on the commit:
 - uses: actions/setup-python@v5
   with:
     python-version: "3.12"
-- run: pip install "aiqg==0.3.1"
+- run: pip install .
+# or, last published PyPI: pip install "aiqg==0.3.0"
 - run: aiqg run path/to/your/cases --junit junit.xml
 - uses: mikepenz/action-junit-report@v4
   if: always()

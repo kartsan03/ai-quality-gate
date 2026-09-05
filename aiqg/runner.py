@@ -9,6 +9,49 @@ import yaml
 
 from . import checks
 
+
+def _resolve_under(case_dir, rel, *, label):
+    """Resolve rel under case_dir; reject absolute paths and .. escapes."""
+    if rel is None or str(rel).strip() == "":
+        raise ValueError(f"{label}: path must be a non-empty relative path")
+    rel = str(rel)
+    if Path(rel).is_absolute():
+        raise ValueError(f"{label}: path must be relative to the case directory, got {rel!r}")
+    if ".." in Path(rel).parts:
+        raise ValueError(f"{label}: path escapes case directory: {rel!r}")
+    case_root = case_dir.resolve()
+    resolved = (case_dir / rel).resolve()
+    try:
+        resolved.relative_to(case_root)
+    except ValueError as e:
+        raise ValueError(f"{label}: path escapes case directory: {rel!r}") from e
+    return resolved
+
+
+def _glob_under(case_dir, pattern):
+    if ".." in Path(pattern).parts:
+        raise ValueError(f"outputs_glob: path escapes case directory: {pattern!r}")
+    case_root = case_dir.resolve()
+    files = []
+    for path in sorted(case_dir.glob(pattern)):
+        resolved = path.resolve()
+        try:
+            resolved.relative_to(case_root)
+        except ValueError as e:
+            raise ValueError(
+                f"outputs_glob: matched path escapes case directory: {path.as_posix()}"
+            ) from e
+        files.append(path)
+    return files
+
+
+_CI_TRUTHY = {"1", "true", "TRUE", "yes"}
+
+
+def _env_truthy(name):
+    return os.environ.get(name, "") in _CI_TRUTHY
+
+
 PER_OUTPUT = {
     "json_schema": checks.check_json_schema,
     "required_fields": checks.check_required_fields,
@@ -59,14 +102,19 @@ def load_case(case_path, *, load_snapshot=True):
     case["checks"] = conf
     _validate_case_schema(case, case_path)
     if "schema_file" in conf.get("json_schema", {}):
-        schema_path = case_dir / conf["json_schema"]["schema_file"]
+        schema_path = _resolve_under(
+            case_dir, conf["json_schema"]["schema_file"], label="schema_file"
+        )
         conf["json_schema"]["schema"] = json.loads(schema_path.read_text(encoding="utf-8"))
     if load_snapshot and "file" in conf.get("snapshot", {}):
-        snapshot_path = case_dir / conf["snapshot"]["file"]
+        snapshot_path = _resolve_under(
+            case_dir, conf["snapshot"]["file"], label="snapshot.file"
+        )
         conf["snapshot"]["expected"] = json.loads(snapshot_path.read_text(encoding="utf-8"))
     case["checks"] = conf
-    case["source"] = (case_dir / case["source_file"]).read_text(encoding="utf-8")
-    case["output_files"] = sorted(case_dir.glob(case["outputs_glob"]))
+    source_path = _resolve_under(case_dir, case["source_file"], label="source_file")
+    case["source"] = source_path.read_text(encoding="utf-8")
+    case["output_files"] = _glob_under(case_dir, case["outputs_glob"])
     case["_case_dir"] = case_dir
     return case
 
@@ -109,9 +157,10 @@ def find_cases(target):
 
 
 def refuse_snapshot_update_in_ci():
-    if os.environ.get("CI") == "true" or os.environ.get("GITHUB_ACTIONS") == "true":
+    if _env_truthy("CI") or _env_truthy("GITHUB_ACTIONS"):
         raise ValueError(
-            "refusing to update snapshots when CI=true or GITHUB_ACTIONS=true"
+            "refusing to update snapshots when CI or GITHUB_ACTIONS is set "
+            "(truthy: 1, true, TRUE, yes)"
         )
 
 
@@ -129,7 +178,7 @@ def update_snapshots(target):
                 f"{case_path}: no outputs match {case['outputs_glob']!r}"
             )
         data = json.loads(case["output_files"][0].read_text(encoding="utf-8"))
-        dest = case["_case_dir"] / snap["file"]
+        dest = _resolve_under(case["_case_dir"], snap["file"], label="snapshot.file")
         dest.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         updated.append(dest.as_posix())
     return updated

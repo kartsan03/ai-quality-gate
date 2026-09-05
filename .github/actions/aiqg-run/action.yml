@@ -4,10 +4,13 @@ inputs:
   path:
     description: case.yml file or directory of cases
     required: true
-  version:
-    description: aiqg version specifier to install
+  install:
+    description: >-
+      pip install target. Default "." installs from the current checkout
+      (requires actions/checkout first). Use aiqg==0.3.0 for the last
+      published PyPI release until 0.3.1 is on PyPI.
     required: false
-    default: "0.3.1"
+    default: "."
   junit:
     description: optional path for a JUnit XML report
     required: false
@@ -28,15 +31,21 @@ runs:
         python-version: ${{ inputs.python-version }}
     - name: Install aiqg
       shell: bash
-      run: pip install "aiqg==${{ inputs.version }}"
+      env:
+        AIQG_INSTALL: ${{ inputs.install }}
+      run: pip install "$AIQG_INSTALL"
     - name: Run aiqg
       shell: bash
+      env:
+        AIQG_PATH: ${{ inputs.path }}
+        AIQG_JUNIT: ${{ inputs.junit }}
+        AIQG_HTML: ${{ inputs.html }}
       run: |
-        args=(run "${{ inputs.path }}")
-        if [ -n "${{ inputs.junit }}" ]; then
-          args+=(--junit "${{ inputs.junit }}")
+        args=(run "$AIQG_PATH")
+        if [ -n "$AIQG_JUNIT" ]; then
+          args+=(--junit "$AIQG_JUNIT")
         fi
-        if [ -n "${{ inputs.html }}" ]; then
-          args+=(--html "${{ inputs.html }}")
+        if [ -n "$AIQG_HTML" ]; then
+          args+=(--html "$AIQG_HTML")
         fi
         aiqg "${args[@]}"

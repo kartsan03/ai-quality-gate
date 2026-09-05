@@ -4,7 +4,7 @@
 
 ### Added
 
-- Composite GitHub Action at `.github/actions/aiqg-run/` (pinned `aiqg==0.3.1`) with a copy-paste workflow example in the README.
+- Composite GitHub Action at `.github/actions/aiqg-run/` (default `pip install .` from checkout; env-safe inputs) with a copy-paste workflow example in the README.
 - `aiqg snapshot --update` and `aiqg run --update-snapshots` rewrite snapshot expected files from recorded outputs; hard-refused when `CI=true` or `GITHUB_ACTIONS=true`.
 - `aiqg ingest` turns JSONL or stdin into `outputs/*.json` (optional `--field` dotted path).
 - JSON Schema for `case.yml` (`aiqg/case_schema.json`); invalid cases exit `2` with a clear setup error.
