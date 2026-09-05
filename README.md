@@ -238,8 +238,7 @@ recording from those tools into fixtures for `aiqg run`.
 Copy-paste workflow using the composite action shipped in this repo
 (`.github/actions/aiqg-run/`). By default it runs `pip install .` against the
 checked-out tree (inputs are passed via `env:`, not interpolated into bash).
-Until `0.3.1` is published to PyPI, prefer installing from checkout or pin the
-last published release `aiqg==0.3.0`.
+PyPI package pin for registry installs: `aiqg==0.3.1`. The Action still defaults to `pip install .` from the checkout.
 
 ```yaml
 name: aiqg
@@ -265,7 +264,7 @@ To install a published PyPI release instead of the checkout:
 - uses: ./.github/actions/aiqg-run
   with:
     path: path/to/your/cases
-    install: "aiqg==0.3.0"
+    install: "aiqg==0.3.1"
 ```
 
 Inputs: `path` (required), `install` (default `.`), `junit`, `html`,
@@ -283,7 +282,7 @@ on the commit:
   with:
     python-version: "3.12"
 - run: pip install .
-# or, last published PyPI: pip install "aiqg==0.3.0"
+# or from PyPI: pip install "aiqg==0.3.1"
 - run: aiqg run path/to/your/cases --junit junit.xml
 - uses: mikepenz/action-junit-report@v4
   if: always()
