@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aiqg-case",
+  "type": "object",
+  "required": ["name", "source_file", "outputs_glob", "checks"],
+  "additionalProperties": false,
+  "properties": {
+    "name": {"type": "string", "minLength": 1},
+    "task_type": {"type": "string"},
+    "source_file": {"type": "string", "minLength": 1},
+    "outputs_glob": {"type": "string", "minLength": 1},
+    "checks": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "json_schema": {
+          "type": "object",
+          "properties": {
+            "schema_file": {"type": "string", "minLength": 1},
+            "schema": {"type": "object"}
+          },
+          "anyOf": [
+            {"required": ["schema_file"]},
+            {"required": ["schema"]}
+          ]
+        },
+        "required_fields": {
+          "type": "object",
+          "required": ["fields"],
+          "properties": {
+            "fields": {
+              "type": "array",
+              "minItems": 1,
+              "items": {"type": "string", "minLength": 1}
+            }
+          },
+          "additionalProperties": false
+        },
+        "regex": {
+          "type": "object",
+          "required": ["fields"],
+          "properties": {
+            "fields": {
+              "type": "object",
+              "minProperties": 1,
+              "additionalProperties": {"type": "string"}
+            }
+          },
+          "additionalProperties": false
+        },
+        "grounding": {
+          "type": "object",
+          "properties": {
+            "fields": {
+              "type": "array",
+              "items": {"type": "string", "minLength": 1}
+            },
+            "numbers_in": {
+              "type": "array",
+              "items": {"type": "string", "minLength": 1}
+            },
+            "require_citations": {"type": "string", "minLength": 1}
+          },
+          "additionalProperties": false
+        },
+        "forbidden_phrases": {
+          "type": ["object", "null"],
+          "properties": {
+            "phrases": {
+              "type": "array",
+              "items": {"type": "string"}
+            }
+          },
+          "additionalProperties": false
+        },
+        "snapshot": {
+          "type": "object",
+          "properties": {
+            "file": {"type": "string", "minLength": 1},
+            "expected": {},
+            "ignore": {
+              "type": "array",
+              "items": {"type": "string"}
+            }
+          },
+          "anyOf": [
+            {"required": ["file"]},
+            {"required": ["expected"]}
+          ]
+        },
+        "stability": {
+          "type": "object",
+          "required": ["fields"],
+          "properties": {
+            "fields": {
+              "type": "array",
+              "minItems": 1,
+              "items": {"type": "string", "minLength": 1}
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  }
+}
