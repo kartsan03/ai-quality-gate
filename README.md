@@ -193,7 +193,8 @@ examples/
     crm_summary/                  call notes + faithful summary
   regressions/  same cases with bad outputs, exits 1 by design
 tests/          pytest suite for the validators and the runner
-docs/           checks reference, recording-outputs guide
+docs/           checks reference, recording-outputs, promptfoo/DeepEval guide
+.github/actions/aiqg-run/   composite Action (pinned aiqg==0.3.1)
 ```
 
 ## How to add a case
@@ -226,9 +227,50 @@ be a non-empty list). Field names take dotted paths like `customer.name`.
 
 Every check and every `case.yml` key is documented in
 [docs/checks.md](docs/checks.md); [docs/recording-outputs.md](docs/recording-outputs.md)
-shows how to produce the recorded outputs in the first place.
+shows how to produce the recorded outputs (`aiqg ingest`, snapshots);
+[docs/with-promptfoo-deepeval.md](docs/with-promptfoo-deepeval.md) covers
+recording from those tools into fixtures for `aiqg run`.
 
 ## Using it in your own CI
+
+### Composite Action (recommended)
+
+Copy-paste workflow using the pinned composite action shipped in this repo
+(`.github/actions/aiqg-run/`, installs `aiqg==0.3.1`):
+
+```yaml
+name: aiqg
+on: [push, pull_request]
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: kartsan03/ai-quality-gate/.github/actions/aiqg-run@v0.3.1
+        with:
+          path: path/to/your/cases
+          junit: junit.xml
+      - uses: mikepenz/action-junit-report@v4
+        if: always()
+        with:
+          report_paths: junit.xml
+```
+
+If you vendor the action from a checkout of this repository (or a submodule),
+use a relative path instead:
+
+```yaml
+- uses: actions/checkout@v4
+- uses: ./.github/actions/aiqg-run
+  with:
+    path: path/to/your/cases
+    version: "0.3.1"
+```
+
+Inputs: `path` (required), `version` (default `0.3.1`), `junit`, `html`,
+`python-version` (default `3.12`).
+
+### Manual install
 
 Install the package, point it at your cases, and let a non-zero exit fail the
 pipeline. `--junit` makes GitHub Actions render each failure as an annotation
@@ -239,7 +281,7 @@ on the commit:
 - uses: actions/setup-python@v5
   with:
     python-version: "3.12"
-- run: pip install aiqg
+- run: pip install "aiqg==0.3.1"
 - run: aiqg run path/to/your/cases --junit junit.xml
 - uses: mikepenz/action-junit-report@v4
   if: always()
