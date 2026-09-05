@@ -29,6 +29,13 @@ def _resolve_under(case_dir, rel, *, label):
 
 
 def _glob_under(case_dir, pattern):
+    if pattern is None or str(pattern).strip() == "":
+        raise ValueError("outputs_glob: path must be a non-empty relative path")
+    pattern = str(pattern)
+    if Path(pattern).is_absolute():
+        raise ValueError(
+            f"outputs_glob: path must be relative to the case directory, got {pattern!r}"
+        )
     if ".." in Path(pattern).parts:
         raise ValueError(f"outputs_glob: path escapes case directory: {pattern!r}")
     case_root = case_dir.resolve()

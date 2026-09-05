@@ -202,3 +202,17 @@ def test_empty_outputs_exits_2(tmp_path, capsys):
     assert main(["run", str(root)]) == 2
     assert "no outputs match" in capsys.readouterr().err
 
+
+def test_absolute_outputs_glob_exits_2(tmp_path, capsys):
+    root = make_snapshot_case(tmp_path / "snap")
+    case = root / "case.yml"
+    text = case.read_text(encoding="utf-8")
+    case.write_text(
+        text.replace("outputs_glob: outputs/*.json", "outputs_glob: /etc/passwd"),
+        encoding="utf-8",
+    )
+    assert main(["run", str(root)]) == 2
+    err = capsys.readouterr().err
+    assert "outputs_glob" in err
+    assert "must be relative" in err
+
