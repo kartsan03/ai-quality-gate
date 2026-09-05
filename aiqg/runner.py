@@ -1,10 +1,63 @@
 import json
+import os
 from dataclasses import dataclass
+from importlib import resources
 from pathlib import Path
 
+import jsonschema
 import yaml
 
 from . import checks
+
+
+def _resolve_under(case_dir, rel, *, label):
+    """Resolve rel under case_dir; reject absolute paths and .. escapes."""
+    if rel is None or str(rel).strip() == "":
+        raise ValueError(f"{label}: path must be a non-empty relative path")
+    rel = str(rel)
+    if Path(rel).is_absolute():
+        raise ValueError(f"{label}: path must be relative to the case directory, got {rel!r}")
+    if ".." in Path(rel).parts:
+        raise ValueError(f"{label}: path escapes case directory: {rel!r}")
+    case_root = case_dir.resolve()
+    resolved = (case_dir / rel).resolve()
+    try:
+        resolved.relative_to(case_root)
+    except ValueError as e:
+        raise ValueError(f"{label}: path escapes case directory: {rel!r}") from e
+    return resolved
+
+
+def _glob_under(case_dir, pattern):
+    if pattern is None or str(pattern).strip() == "":
+        raise ValueError("outputs_glob: path must be a non-empty relative path")
+    pattern = str(pattern)
+    if Path(pattern).is_absolute():
+        raise ValueError(
+            f"outputs_glob: path must be relative to the case directory, got {pattern!r}"
+        )
+    if ".." in Path(pattern).parts:
+        raise ValueError(f"outputs_glob: path escapes case directory: {pattern!r}")
+    case_root = case_dir.resolve()
+    files = []
+    for path in sorted(case_dir.glob(pattern)):
+        resolved = path.resolve()
+        try:
+            resolved.relative_to(case_root)
+        except ValueError as e:
+            raise ValueError(
+                f"outputs_glob: matched path escapes case directory: {path.as_posix()}"
+            ) from e
+        files.append(path)
+    return files
+
+
+_CI_TRUTHY = {"1", "true", "TRUE", "yes"}
+
+
+def _env_truthy(name):
+    return os.environ.get(name, "") in _CI_TRUTHY
+
 
 PER_OUTPUT = {
     "json_schema": checks.check_json_schema,
@@ -15,6 +68,10 @@ PER_OUTPUT = {
     "snapshot": checks.check_snapshot,
 }
 
+_CASE_SCHEMA = json.loads(
+    resources.files("aiqg").joinpath("case_schema.json").read_text(encoding="utf-8")
+)
+
 
 @dataclass
 class CheckResult:
@@ -24,7 +81,18 @@ class CheckResult:
     failures: list
 
 
-def load_case(case_path):
+def _validate_case_schema(case, case_path):
+    validator = jsonschema.Draft202012Validator(_CASE_SCHEMA)
+    errors = sorted(validator.iter_errors(case), key=lambda e: list(e.absolute_path))
+    if not errors:
+        return
+    e = errors[0]
+    path = ".".join(str(p) for p in e.absolute_path)
+    where = f" ({path})" if path else ""
+    raise ValueError(f"{case_path.as_posix()}: invalid case.yml{where}: {e.message}")
+
+
+def load_case(case_path, *, load_snapshot=True):
     case_dir = case_path.parent
     try:
         case = yaml.safe_load(case_path.read_text(encoding="utf-8"))
@@ -32,32 +100,29 @@ def load_case(case_path):
         raise ValueError(f"{case_path.as_posix()}: invalid YAML: {e}") from e
     if not isinstance(case, dict):
         raise ValueError(f"{case_path.as_posix()}: case file must be a YAML mapping")
-    for key in ("name", "source_file", "outputs_glob"):
-        if key not in case:
-            raise ValueError(f"{case_path.as_posix()}: missing required key {key!r}")
     conf = case.get("checks") or {}
-    known = set(PER_OUTPUT) | {"stability"}
-    for check_name in conf:
-        if check_name not in known:
-            raise ValueError(f"{case_path.as_posix()}: unknown check {check_name!r}")
+    if not isinstance(conf, dict):
+        raise ValueError(f"{case_path.as_posix()}: checks must be a mapping")
+    for check_name in list(conf):
         if conf[check_name] is None:
             conf[check_name] = {}
-    if "json_schema" in conf and not {"schema", "schema_file"} & conf["json_schema"].keys():
-        raise ValueError(f"{case_path.as_posix()}: json_schema requires 'schema_file' or an inline 'schema'")
-    if "snapshot" in conf and not {"expected", "file"} & conf["snapshot"].keys():
-        raise ValueError(f"{case_path.as_posix()}: snapshot requires 'file' or an inline 'expected'")
-    for check_name in ("required_fields", "regex", "stability"):
-        if check_name in conf and "fields" not in conf[check_name]:
-            raise ValueError(f"{case_path.as_posix()}: {check_name} requires 'fields'")
+    case["checks"] = conf
+    _validate_case_schema(case, case_path)
     if "schema_file" in conf.get("json_schema", {}):
-        schema_path = case_dir / conf["json_schema"]["schema_file"]
+        schema_path = _resolve_under(
+            case_dir, conf["json_schema"]["schema_file"], label="schema_file"
+        )
         conf["json_schema"]["schema"] = json.loads(schema_path.read_text(encoding="utf-8"))
-    if "file" in conf.get("snapshot", {}):
-        snapshot_path = case_dir / conf["snapshot"]["file"]
+    if load_snapshot and "file" in conf.get("snapshot", {}):
+        snapshot_path = _resolve_under(
+            case_dir, conf["snapshot"]["file"], label="snapshot.file"
+        )
         conf["snapshot"]["expected"] = json.loads(snapshot_path.read_text(encoding="utf-8"))
     case["checks"] = conf
-    case["source"] = (case_dir / case["source_file"]).read_text(encoding="utf-8")
-    case["output_files"] = sorted(case_dir.glob(case["outputs_glob"]))
+    source_path = _resolve_under(case_dir, case["source_file"], label="source_file")
+    case["source"] = source_path.read_text(encoding="utf-8")
+    case["output_files"] = _glob_under(case_dir, case["outputs_glob"])
+    case["_case_dir"] = case_dir
     return case
 
 
@@ -96,3 +161,62 @@ def find_cases(target):
     if not cases:
         raise FileNotFoundError(f"no case.yml files under {target}")
     return cases
+
+
+def refuse_snapshot_update_in_ci():
+    if _env_truthy("CI") or _env_truthy("GITHUB_ACTIONS"):
+        raise ValueError(
+            "refusing to update snapshots when CI or GITHUB_ACTIONS is set "
+            "(truthy: 1, true, TRUE, yes)"
+        )
+
+
+def update_snapshots(target):
+    """Rewrite snapshot expected files from the first recorded output of each case."""
+    refuse_snapshot_update_in_ci()
+    updated = []
+    for case_path in find_cases(target):
+        case = load_case(case_path, load_snapshot=False)
+        snap = case["checks"].get("snapshot")
+        if not snap or "file" not in snap:
+            continue
+        if not case["output_files"]:
+            raise FileNotFoundError(
+                f"{case_path}: no outputs match {case['outputs_glob']!r}"
+            )
+        data = json.loads(case["output_files"][0].read_text(encoding="utf-8"))
+        dest = _resolve_under(case["_case_dir"], snap["file"], label="snapshot.file")
+        dest.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        updated.append(dest.as_posix())
+    return updated
+
+
+def ingest_jsonl(source, out_dir, field=None):
+    """Write one JSON file per JSONL line (or stdin) into out_dir."""
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    if source == "-" or source is None:
+        import sys
+        lines = sys.stdin.read().splitlines()
+    else:
+        lines = Path(source).read_text(encoding="utf-8").splitlines()
+    written = []
+    n = 0
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            obj = json.loads(line)
+        except json.JSONDecodeError as e:
+            raise ValueError(f"invalid JSON on line {n + 1}: {e}") from e
+        if field:
+            value = checks.get_path(obj, field)
+            if value is None:
+                raise ValueError(f"line {n + 1}: field {field!r} not found")
+            obj = value
+        path = out / f"{n:04d}.json"
+        path.write_text(json.dumps(obj, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        written.append(path.as_posix())
+        n += 1
+    return written

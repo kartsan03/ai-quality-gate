@@ -193,7 +193,8 @@ examples/
     crm_summary/                  call notes + faithful summary
   regressions/  same cases with bad outputs, exits 1 by design
 tests/          pytest suite for the validators and the runner
-docs/           checks reference, recording-outputs guide
+docs/           checks reference, recording-outputs, promptfoo/DeepEval guide
+.github/actions/aiqg-run/   composite Action (installs from checkout by default)
 ```
 
 ## How to add a case
@@ -226,9 +227,51 @@ be a non-empty list). Field names take dotted paths like `customer.name`.
 
 Every check and every `case.yml` key is documented in
 [docs/checks.md](docs/checks.md); [docs/recording-outputs.md](docs/recording-outputs.md)
-shows how to produce the recorded outputs in the first place.
+shows how to produce the recorded outputs (`aiqg ingest`, snapshots);
+[docs/with-promptfoo-deepeval.md](docs/with-promptfoo-deepeval.md) covers
+recording from those tools into fixtures for `aiqg run`.
 
 ## Using it in your own CI
+
+### Composite Action (recommended)
+
+Copy-paste workflow using the composite action shipped in this repo
+(`.github/actions/aiqg-run/`). By default it runs `pip install .` against the
+checked-out tree (inputs are passed via `env:`, not interpolated into bash).
+Until `0.3.1` is published to PyPI, prefer installing from checkout or pin the
+last published release `aiqg==0.3.0`.
+
+```yaml
+name: aiqg
+on: [push, pull_request]
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/aiqg-run
+        with:
+          path: path/to/your/cases
+          junit: junit.xml
+      - uses: mikepenz/action-junit-report@v4
+        if: always()
+        with:
+          report_paths: junit.xml
+```
+
+To install a published PyPI release instead of the checkout:
+
+```yaml
+- uses: ./.github/actions/aiqg-run
+  with:
+    path: path/to/your/cases
+    install: "aiqg==0.3.0"
+```
+
+Inputs: `path` (required), `install` (default `.`), `junit`, `html`,
+`python-version` (default `3.12`).
+
+### Manual install
 
 Install the package, point it at your cases, and let a non-zero exit fail the
 pipeline. `--junit` makes GitHub Actions render each failure as an annotation
@@ -239,7 +282,8 @@ on the commit:
 - uses: actions/setup-python@v5
   with:
     python-version: "3.12"
-- run: pip install aiqg
+- run: pip install .
+# or, last published PyPI: pip install "aiqg==0.3.0"
 - run: aiqg run path/to/your/cases --junit junit.xml
 - uses: mikepenz/action-junit-report@v4
   if: always()

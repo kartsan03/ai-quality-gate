@@ -54,11 +54,12 @@ def test_bad_path_exits_2_without_gate_failure(capsys):
     assert "error" in capsys.readouterr().err
 
 
-def test_unknown_check_name_exits_2(tmp_path):
+def test_unknown_check_name_exits_2(tmp_path, capsys):
     case = make_passing_case(tmp_path / "tiny")
     text = case.read_text(encoding="utf-8")
     case.write_text(text + "  not_a_check: {}\n", encoding="utf-8")
     assert main(["run", str(case)]) == 2
+    assert "invalid case.yml" in capsys.readouterr().err
 
 
 def test_version_flag(capsys):
@@ -122,7 +123,8 @@ def test_case_missing_required_key_exits_2(tmp_path, capsys):
     root = make_passing_case(tmp_path / "tiny")
     root.write_text("name: broken\n", encoding="utf-8")
     assert main(["run", str(root)]) == 2
-    assert "missing required key" in capsys.readouterr().err
+    err = capsys.readouterr().err
+    assert "invalid case.yml" in err
 
 
 def test_case_invalid_yaml_exits_2(tmp_path, capsys):

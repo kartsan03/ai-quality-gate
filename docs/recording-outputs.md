@@ -11,12 +11,28 @@ my_case/
     run_1.json      # one JSON file per recorded model output
 ```
 
-Three ways to get there.
+Four ways to get there.
 
-## From logs
+## From logs with `aiqg ingest`
 
-If your pipeline logs requests and responses (JSONL or any structured log),
-split them into per-output files:
+If your pipeline logs JSONL (one JSON object per line), split them into
+per-output files:
+
+```
+# whole object per line
+aiqg ingest pipeline_logs.jsonl --out invoice_extraction/outputs
+
+# keep only a nested field (dotted path)
+aiqg ingest pipeline_logs.jsonl --out invoice_extraction/outputs --field response
+
+# stdin
+cat pipeline_logs.jsonl | aiqg ingest --out invoice_extraction/outputs --field response
+```
+
+Writes `0000.json`, `0001.json`, … into `--out` (default `outputs`). Empty
+input or a missing `--field` is a setup error (exit 2).
+
+## From logs (manual)
 
 ```python
 import json
@@ -68,6 +84,20 @@ picked up by `outputs_glob` and compared in sorted order.
 Timestamps, latencies, confidences and other values that legitimately change
 between runs should be excluded from `snapshot` via `ignore`; that list drops
 keys recursively before the diff.
+
+## Updating snapshots
+
+After a deliberate output change, rewrite the approved snapshot from the first
+recorded output of each case:
+
+```
+aiqg snapshot --update path/to/cases
+# or, update then re-run the gate in one step:
+aiqg run path/to/cases --update-snapshots
+```
+
+Both refuse to run when `CI=true` or `GITHUB_ACTIONS=true`, so a misconfigured
+workflow cannot silently rewrite golden files in CI.
 
 ## What to commit
 

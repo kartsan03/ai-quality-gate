@@ -1,0 +1,51 @@
+name: aiqg-run
+description: Install aiqg and run the quality gate on recorded AI outputs
+inputs:
+  path:
+    description: case.yml file or directory of cases
+    required: true
+  install:
+    description: >-
+      pip install target. Default "." installs from the current checkout
+      (requires actions/checkout first). Use aiqg==0.3.0 for the last
+      published PyPI release until 0.3.1 is on PyPI.
+    required: false
+    default: "."
+  junit:
+    description: optional path for a JUnit XML report
+    required: false
+    default: ""
+  html:
+    description: optional path for a static HTML report
+    required: false
+    default: ""
+  python-version:
+    description: Python version for setup-python
+    required: false
+    default: "3.12"
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+    - name: Install aiqg
+      shell: bash
+      env:
+        AIQG_INSTALL: ${{ inputs.install }}
+      run: pip install "$AIQG_INSTALL"
+    - name: Run aiqg
+      shell: bash
+      env:
+        AIQG_PATH: ${{ inputs.path }}
+        AIQG_JUNIT: ${{ inputs.junit }}
+        AIQG_HTML: ${{ inputs.html }}
+      run: |
+        args=(run "$AIQG_PATH")
+        if [ -n "$AIQG_JUNIT" ]; then
+          args+=(--junit "$AIQG_JUNIT")
+        fi
+        if [ -n "$AIQG_HTML" ]; then
+          args+=(--html "$AIQG_HTML")
+        fi
+        aiqg "${args[@]}"
