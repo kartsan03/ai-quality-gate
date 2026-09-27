@@ -19,6 +19,16 @@ def test_grounding_catches_hallucinated_value():
     assert failures and "not found in source" in failures[0]
 
 
+def test_grounding_rejects_part_of_a_larger_number():
+    conf = {"fields": ["total"]}
+    assert checks.check_grounding(conf, {"total": "10"}, "Total due: 100 EUR")
+    assert checks.check_grounding(conf, {"total": "250"}, "Total: $1,250.00")
+    assert checks.check_grounding(conf, {"total": "100"}, "Paid 100.50 today")
+    assert checks.check_grounding(conf, {"total": "1250"}, "Total: $1,250.00") == []
+    assert checks.check_grounding(conf, {"total": "100"}, "Total due: 100.") == []
+    numbers = checks.check_grounding({"numbers_in": ["answer"]}, {"answer": "about 10 days"}, "within 100 days")
+    assert numbers == ["grounding: number '10' in answer not found in source"]
+
 def test_grounding_numbers_and_citations():
     source = "Refunds are processed within 14 days."
     conf = {"numbers_in": ["answer"], "require_citations": "citations"}
@@ -44,6 +54,14 @@ def test_snapshot_ignores_configured_fields():
     failures = checks.check_snapshot(conf, {"total": "6", "confidence": 0.4}, "")
     assert failures == ["snapshot: total: expected '5', got '6'"]
 
+
+def test_snapshot_does_not_equate_bools_and_numbers():
+    conf = {"expected": {"approved": True, "flags": [False]}}
+    failures = checks.check_snapshot(conf, {"approved": 1, "flags": [0]}, "")
+    assert failures == [
+        "snapshot: approved: expected True, got 1",
+        "snapshot: flags: expected [False], got [0]",
+    ]
 
 def test_stability_catches_inconsistent_critical_field():
     conf = {"fields": ["category"]}

@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Grounding no longer accepts a value that is only part of a larger number in the source: an invented `10` passed against `Total due: 100 EUR`, `250` against `$1,250.00`. A zero decimal tail still matches (`1250` against `1,250.00`).
+- Snapshot compares values as JSON, like stability, so `true` no longer matches `1` and `false` no longer matches `0`.
+
 ## 0.3.1 - 2026-09-05
 
 ### Added

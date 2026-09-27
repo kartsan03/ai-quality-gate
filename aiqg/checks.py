@@ -37,14 +37,30 @@ def _strip_separators(text):
     return re.sub(r"[,$€ ]", "", text)
 
 
+# A value that starts or ends with a digit may not continue a number in the source:
+# "10" is not in "100", "250" is not in "1,250" or "0.250", "100" is not in "100.50".
+# A zero decimal tail is allowed, so "1250" still matches "1,250.00".
+_NUM_START = r"(?<!\d)(?<!\d[.,])"
+_NUM_END = r"(?!\d)(?!,\d)(?!\.(?!0+(?!\d))\d)"
+
+
+def _contains(value, text):
+    pattern = re.escape(value)
+    if value[0].isdigit():
+        pattern = _NUM_START + pattern
+    if value[-1].isdigit():
+        pattern += _NUM_END
+    return re.search(pattern, text) is not None
+
+
 def _in_source(value, source):
-    # ponytail: naive substring containment. Catches copied-vs-invented values,
-    # not paraphrase. Move to word-boundary matching if short values false-positive.
+    # Substring containment with number boundaries. Catches copied-vs-invented
+    # values, not paraphrase.
     v, src = _norm(value), _norm(source)
-    if v and v in src:
+    if v and _contains(v, src):
         return True
     v = _strip_separators(v)
-    return bool(v) and v in _strip_separators(src)
+    return bool(v) and _contains(v, _strip_separators(src))
 
 
 def check_json_schema(config, output, source):
@@ -133,7 +149,8 @@ def _diff(expected, got, path=""):
             else:
                 lines.extend(_diff(expected[key], got[key], sub))
         return lines
-    if expected != got:
+    # Compare as JSON, like check_stability: == treats true as 1 and false as 0.
+    if json.dumps(expected, sort_keys=True, default=str) != json.dumps(got, sort_keys=True, default=str):
         return [f"{path or 'value'}: expected {expected!r}, got {got!r}"]
     return []
 
